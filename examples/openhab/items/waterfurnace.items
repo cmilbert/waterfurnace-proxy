@@ -1,0 +1,27 @@
+Number WaterFurnace_Energy_CompressorPower "WaterFurnace Compressor Power" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH($.compressorpower)]" }
+Number WaterFurnace_Energy_FanPower "WaterFurnace Fan Power" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH($.fanpower)]" }
+Number WaterFurnace_Energy_AuxPower "WaterFurnace Aux Power" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH($.auxpower)]" }
+Number WaterFurnace_Energy_LoopPumpPower "WaterFurnace Loop Pump Power" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH($.looppumppower)]" }
+Number WaterFurnace_Energy_TotalUnitPower "WaterFurnace Total Unit Power" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH($.totalunitpower)]" }
+
+Number WaterFurnace_Operation_ModeOfOperation "WaterFurnace Mode of Operation" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH($.modeofoperation)]" }
+
+Number WaterFurnace_Operation_ActualCompressorSpeed "WaterFurnace Actual Compressor Speed" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(actualcompressorspeed)]" }
+Number WaterFurnace_Operation_AirflowCurrentSpeed "WaterFurnace Airflow Current Speed" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(airflowcurrentspeed)]" }
+Number WaterFurnace_Operation_LeavingAirTemp "WaterFurnace Leaving Air Temperature" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(leavingairtemp)]" }
+Number WaterFurnace_Operation_EnteringWaterTemp "WaterFurnace Entering Water Temp" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(enteringwatertemp)]" }
+Number WaterFurnace_Operation_AOCEnteringWaterTemp "WaterFurnace AOC Entering Water Temp" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(aocenteringwatertemp)]" }
+Number WaterFurnace_Operation_LeavingWaterTemp "WaterFurnace Leaving Water Temp" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(leavingwatertemp)]" }
+
+Number WaterFurnace_Operation_DehumidSetpoint "WaterFurnace Dehumid Setpoint" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(tstatdehumidsetpoint)]" }
+Number WaterFurnace_Operation_RelativeHumidity "WaterFurnace Relative Humidity" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(tstatrelativehumidity)]" }
+Number WaterFurnace_Operation_RoomTemp "WaterFurnace Room Temperature" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(tstatroomtemp)]" }
+Number WaterFurnace_Operation_UnitRoomTemp "WaterFurnace Unit Room Temperature" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(roomtemp)]" }
+
+Number WaterFurnace_Operation_ThermostatMode "WaterFurnace Thermostat Mode" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(activesettings.tstatmode)]" }
+Number WaterFurnace_Operation_ActiveMode "WaterFurnace Active Mode" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(activesettings.activemode)]" }
+Number WaterFurnace_Operation_HeatingSetpoint "WaterFurnace Heating Setpoint" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(activesettings.heatingsp_read)]" }
+Number WaterFurnace_Operation_CoolingSetpoint "WaterFurnace Cooling Setpoint" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(activesettings.coolingsp_read)]" }
+Number WaterFurnace_Operation_FanMode "WaterFurnace Fan Mode" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(activesettings.fanmode_read)]" }
+Number WaterFurnace_Operation_IntermittentOn "WaterFurnace Intermittent Fan On Time" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(activesettings.intertimeon_read)]" }
+ Number WaterFurnace_Operation_IntermittentOff "WaterFurnace Intermittent Fan Off Time" (WaterFurnace) { http="<[waterFurnaceCache:10000:JSONPATH(activesettings.intertimeoff_read)]" }
