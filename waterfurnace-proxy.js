@@ -204,7 +204,6 @@ getLoginSession(function (err, res) {
 
     connection.on('message', function incoming (data) {
       logger.verbose('websocket message data: ' + data)
-      lastResponse = data
       var dataJson = JSON.parse(data)
 
       if (dataJson.rsp && dataJson.rsp === 'login') {
@@ -228,6 +227,8 @@ getLoginSession(function (err, res) {
             process.exit()
           }
         })
+      } else {
+        lastResponse = data
       }
 
       setTimeout(function timeout () {
