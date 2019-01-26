@@ -131,7 +131,9 @@ app.get('/', function (req, res) {
   }
 
   res.status(responseStatusCode)
-  res.json(JSON.parse(lastResponse))
+  if (responseStatusCode === 200 && !isEmptyObject(lastResponse)) {
+    res.json(JSON.parse(lastResponse))
+  }
   res.end()
 })
 
