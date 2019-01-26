@@ -4,8 +4,10 @@ const querystring = require('querystring')
 const request = require('request')
 const cookie = require('cookie')
 const WebSocket = require('ws')
+
 const fs = require('fs')
 const config = JSON.parse(fs.readFileSync('config.json'))
+
 const logger = winston.createLogger({
   level: config.logLevel,
   format: winston.format.simple(),
@@ -25,8 +27,10 @@ var lastResponse = {}
 var websocketPostMessage = {}
 var tid = 1
 var awlid = ''
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0' // Temporary hold over since the WF cert expired
+var sessionid
+var cookies
+var loginMessage = {}
+var websocketConnected = false
 
 /*
 const modeEnum = {
@@ -90,40 +94,68 @@ app.options('*', function (req, res) {
 })
 
 app.get('/', function (req, res) {
+  var responseStatusCode = 200
   if (!isEmptyObject(req.query)) {
-    websocketPostMessage = {
-      'cmd': 'write',
-      'tid': tid,
-      'awlid': awlid,
-      'source': 'tstat'
-    }
-    // Heating and cooling set points
-    if (req.query.heatingsp_write) { websocketPostMessage.heatingsp_write = req.query.heatingsp_write }
-    if (req.query.coolingsp_write) { websocketPostMessage.coolingsp_write = req.query.coolingsp_write }
-    // Operation mode
-    if (req.query.activemode_write) { websocketPostMessage.activemode_write = req.query.activemode_write }
-    // Fan controls
-    if (req.query.fanmode_write) { websocketPostMessage.fanmode_write = req.query.fanmode_write }
-    if (req.query.intertimeon_write) { websocketPostMessage.intertimeon_write = req.query.intertimeon_write }
-    if (req.query.intertimeoff_write) { websocketPostMessage.intertimeoff_write = req.query.intertimeoff_write }
-    // Humidification and dehumidification controls
-    if (req.query.humidity_offset) { websocketPostMessage.humidity_offset_settings.humidity_offset = req.query.humidity_offset }
-    if (req.query.humdity_control_option) { websocketPostMessage.humidity_offset_settings.humdity_control_option = req.query.humdity_control_option }
-    if (req.query.humidification_mode) { websocketPostMessage.humidity_offset_settings.humidification_mode = req.query.humidification_mode }
-    if (req.query.dehumidification_mode) { websocketPostMessage.humidity_offset_settings.dehumidification_mode = req.query.dehumidification_mode }
-    if (req.query.dehumidification) { websocketPostMessage.dehumid_humid_sp.dehumidification = req.query.dehumidification }
-    if (req.query.humidification) { websocketPostMessage.dehumid_humid_sp.humidification = req.query.humidification }
+    if (websocketConnected) {
+      websocketPostMessage = {
+        'cmd': 'write',
+        'tid': tid,
+        'awlid': awlid,
+        'source': 'tstat'
+      }
+      // Heating and cooling set points
+      if (req.query.heatingsp_write) { websocketPostMessage.heatingsp_write = req.query.heatingsp_write }
+      if (req.query.coolingsp_write) { websocketPostMessage.coolingsp_write = req.query.coolingsp_write }
+      // Operation mode
+      if (req.query.activemode_write) { websocketPostMessage.activemode_write = req.query.activemode_write }
+      // Fan controls
+      if (req.query.fanmode_write) { websocketPostMessage.fanmode_write = req.query.fanmode_write }
+      if (req.query.intertimeon_write) { websocketPostMessage.intertimeon_write = req.query.intertimeon_write }
+      if (req.query.intertimeoff_write) { websocketPostMessage.intertimeoff_write = req.query.intertimeoff_write }
+      // Humidification and dehumidification controls
+      if (req.query.humidity_offset) { websocketPostMessage.humidity_offset_settings.humidity_offset = req.query.humidity_offset }
+      if (req.query.humdity_control_option) { websocketPostMessage.humidity_offset_settings.humdity_control_option = req.query.humdity_control_option }
+      if (req.query.humidification_mode) { websocketPostMessage.humidity_offset_settings.humidification_mode = req.query.humidification_mode }
+      if (req.query.dehumidification_mode) { websocketPostMessage.humidity_offset_settings.dehumidification_mode = req.query.dehumidification_mode }
+      if (req.query.dehumidification) { websocketPostMessage.dehumid_humid_sp.dehumidification = req.query.dehumidification }
+      if (req.query.humidification) { websocketPostMessage.dehumid_humid_sp.humidification = req.query.humidification }
 
-    if (Object.keys(websocketPostMessage).length <= 4) {
-      logger.debug('Ambiguous query parameters')
-      websocketPostMessage = {}
+      if (Object.keys(websocketPostMessage).length <= 4) {
+        logger.debug('Ambiguous query parameters')
+        websocketPostMessage = {}
+        responseStatusCode = 400
+      }
+    } else {
+      responseStatusCode = 409
     }
   }
 
-  res.status(200)
+  res.status(responseStatusCode)
   res.json(JSON.parse(lastResponse))
   res.end()
 })
+
+server.listen(port, (err) => {
+  if (err) {
+    throw err
+  }
+  logger.info('Express is listening on ' + port)
+})
+
+function renewSession () {
+  logger.debug('Renewing sessionid')
+  getLoginSession(function (err, res) {
+    if (!err) {
+      cookies = cookie.parse(res.headers['set-cookie'][0])
+      sessionid = cookies.sessionid
+      tid = 1
+      loginMessage = getLoginRequest(sessionid)
+    } else {
+      logger.error(err)
+      process.exit()
+    }
+  })
+}
 
 function getLoginRequest (sessionid) {
   return {
@@ -183,73 +215,68 @@ function getReadRequest (tid, awlid) {
   }
 }
 
-getLoginSession(function (err, res) {
-  if (!err) {
-    var cookies = cookie.parse(res.headers['set-cookie'][0])
-    var sessionid = cookies.sessionid
-    var loginMessage = {}
+var connectToWebsocket = function () {
+  getLoginSession(function (err, res) {
+    if (!err) {
+      cookies = cookie.parse(res.headers['set-cookie'][0])
+      sessionid = cookies.sessionid
 
-    var connection = new WebSocket('wss://awlclientproxy.mywaterfurnace.com/', {
-      origin: 'https://symphony.mywaterfurnace.com'
-    })
+      var connection = new WebSocket('wss://awlclientproxy.mywaterfurnace.com/', {
+        origin: 'https://symphony.mywaterfurnace.com'
+      })
 
-    connection.on('open', function open () {
-      logger.verbose('websocket connected')
-      connection.send(JSON.stringify(getLoginRequest(sessionid)))
-    })
+      connection.on('open', function open () {
+        websocketConnected = true
+        logger.verbose('Websocket connected')
+        connection.send(JSON.stringify(getLoginRequest(sessionid)))
+      })
 
-    connection.on('close', function close () {
-      logger.verbose('websocket disconnected')
-    })
+      connection.on('close', function close () {
+        websocketConnected = false
+        logger.verbose('Websocket disconnected.  Reconnecting in 60 seconds.')
+        setTimeout(connectToWebsocket, 60000)
+      })
 
-    connection.on('message', function incoming (data) {
-      logger.verbose('websocket message data: ' + data)
-      var dataJson = JSON.parse(data)
+      connection.on('error', function error () {
+        websocketConnected = false
+        logger.verbose('Websocket connection error.  Reconnecting in 60 seconds.')
+        setTimeout(connectToWebsocket, 60000)
+      })
 
-      if (dataJson.rsp && dataJson.rsp === 'login') {
-        awlid = dataJson.locations[0].gateways[0].gwid
-        server.listen(port, (err) => {
-          if (err) {
-            throw err
-          }
-          logger.info('Express is listening on ' + port)
-        })
-      } else if (dataJson.err === 'Missing transaction.') {
-        logger.debug('Renewing sessionid')
-        getLoginSession(function (err, res) {
-          if (!err) {
-            cookies = cookie.parse(res.headers['set-cookie'][0])
-            sessionid = cookies.sessionid
-            tid = 1
-            loginMessage = getLoginRequest(sessionid)
-          } else {
-            logger.error(err)
-            process.exit()
-          }
-        })
-      } else {
-        lastResponse = data
-      }
+      connection.on('message', function incoming (data) {
+        logger.verbose('Websocket message data: ' + data)
+        var dataJson = JSON.parse(data)
 
-      setTimeout(function timeout () {
-        var requestMessage = ''
-
-        if (!isEmptyObject(loginMessage !== '')) {
-          requestMessage = loginMessage
-        } else if (!isEmptyObject(websocketPostMessage)) {
-          requestMessage = websocketPostMessage
-          websocketPostMessage = {}
+        if (dataJson.rsp && dataJson.rsp === 'login') {
+          awlid = dataJson.locations[0].gateways[0].gwid
+        } else if (dataJson.err === 'Missing transaction.') {
+          renewSession()
         } else {
-          requestMessage = getReadRequest(tid, awlid)
+          lastResponse = data
         }
 
-        logger.debug('req: ' + JSON.stringify(requestMessage))
-        connection.send(JSON.stringify(requestMessage))
-        tid++
-      }, config.pollingTime * 1000)
-    })
-  } else {
-    logger.error(err)
-    process.exit()
-  }
-})
+        setTimeout(function timeout () {
+          var requestMessage = ''
+
+          if (!isEmptyObject(loginMessage !== '')) {
+            requestMessage = loginMessage
+          } else if (!isEmptyObject(websocketPostMessage)) {
+            requestMessage = websocketPostMessage
+            websocketPostMessage = {}
+          } else {
+            requestMessage = getReadRequest(tid, awlid)
+          }
+
+          logger.debug('req: ' + JSON.stringify(requestMessage))
+          connection.send(JSON.stringify(requestMessage))
+          tid++
+        }, config.pollingTime * 1000)
+      })
+    } else {
+      logger.error(err)
+      process.exit()
+    }
+  })
+}
+
+connectToWebsocket()
