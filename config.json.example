@@ -1,7 +1,7 @@
 {
-  'emailAddress': 'foo@bar.com',
-  'password': '',
-  'pollingTime': 5,
-  'serverPort': 3001,
-  'logLevel': 'info'
+  "emailAddress": "foo@bar.com",
+  "password": "",
+  "pollingTime": 5,
+  "serverPort": 3001,
+  "logLevel": "info"
 }
