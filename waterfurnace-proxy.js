@@ -6,7 +6,8 @@ const cookie = require('cookie')
 const WebSocket = require('ws')
 
 const fs = require('fs')
-const config = JSON.parse(fs.readFileSync('config.json'))
+const path = require('path')
+const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json')))
 
 const logger = winston.createLogger({
   level: config.logLevel,
