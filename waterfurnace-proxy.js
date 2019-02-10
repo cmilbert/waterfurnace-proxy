@@ -23,7 +23,9 @@ const server = require('http').Server(app)
 const port = config.serverPort
 const helmet = require('helmet')
 
+var connection
 var lastResponse = {}
+var lastResponseTimestamp
 var websocketPostMessage = {}
 var tid = 1
 var awlid = ''
@@ -76,13 +78,13 @@ function getLoginSession (callback) {
       return callback(err)
     }
   })
-};
+}
 
 app.use(helmet())
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
-app.use((req, res, next) => {
+app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
   res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept')
@@ -124,6 +126,9 @@ app.get('/', function (req, res) {
         logger.debug('Ambiguous query parameters')
         websocketPostMessage = {}
         responseStatusCode = 400
+      } else {
+        connection.send(JSON.stringify(websocketPostMessage))
+        tid++
       }
     } else {
       responseStatusCode = 409
@@ -137,7 +142,7 @@ app.get('/', function (req, res) {
   res.end()
 })
 
-server.listen(port, (err) => {
+server.listen(port, function (err) {
   if (err) {
     throw err
   }
@@ -217,14 +222,39 @@ function getReadRequest (tid, awlid) {
   }
 }
 
+var scheduleSendReadRequest = function () {
+  setTimeout(function timeout () {
+    if (((new Date()) - lastResponseTimestamp) > ((config.pollingTime + 10) * 1000)) {
+      logger.verbose('Did not receive last response in a reasonable time, renewing session')
+      renewSession()
+    } else if (websocketConnected) {
+      var requestMessage = ''
+
+      if (!isEmptyObject(loginMessage !== '')) {
+        requestMessage = loginMessage
+      } else {
+        requestMessage = getReadRequest(tid, awlid)
+      }
+
+      logger.debug('req: ' + JSON.stringify(requestMessage))
+      connection.send(JSON.stringify(requestMessage))
+      tid++
+    } else {
+      logger.verbose('Can not send request, waiting on websocket connection')
+    }
+    scheduleSendReadRequest()
+  }, config.pollingTime * 1000)
+}
+
 var connectToWebsocket = function () {
   getLoginSession(function (err, res) {
     if (!err) {
       cookies = cookie.parse(res.headers['set-cookie'][0])
       sessionid = cookies.sessionid
 
-      var connection = new WebSocket('wss://awlclientproxy.mywaterfurnace.com/', {
-        origin: 'https://symphony.mywaterfurnace.com'
+      connection = new WebSocket('wss://awlclientproxy.mywaterfurnace.com/', {
+        origin: 'https://symphony.mywaterfurnace.com',
+        handshakeTimeout: 30000
       })
 
       connection.on('open', function open () {
@@ -255,24 +285,8 @@ var connectToWebsocket = function () {
           renewSession()
         } else {
           lastResponse = data
+          lastResponseTimestamp = Date.now()
         }
-
-        setTimeout(function timeout () {
-          var requestMessage = ''
-
-          if (!isEmptyObject(loginMessage !== '')) {
-            requestMessage = loginMessage
-          } else if (!isEmptyObject(websocketPostMessage)) {
-            requestMessage = websocketPostMessage
-            websocketPostMessage = {}
-          } else {
-            requestMessage = getReadRequest(tid, awlid)
-          }
-
-          logger.debug('req: ' + JSON.stringify(requestMessage))
-          connection.send(JSON.stringify(requestMessage))
-          tid++
-        }, config.pollingTime * 1000)
       })
     } else {
       logger.error(err)
@@ -282,3 +296,4 @@ var connectToWebsocket = function () {
 }
 
 connectToWebsocket()
+scheduleSendReadRequest()
