@@ -225,7 +225,9 @@ function getReadRequest (tid, awlid) {
 
 var scheduleSendReadRequest = function () {
   setTimeout(function timeout () {
-    if (!isEmptyObject(lastResponse) && ((new Date()) - lastResponseTimestamp) > ((config.pollingTime + 10) * 1000)) {
+    if (!isEmptyObject(lastResponse) &&
+        isEmptyObject(loginMessage) &&
+        ((new Date()) - lastResponseTimestamp) > ((config.pollingTime + 10) * 1000)) {
       logger.verbose('Did not receive last response in a reasonable time, reconnecting to websocket')
       connection.close()
       connectToWebsocket()
