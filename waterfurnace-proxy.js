@@ -225,13 +225,14 @@ function getReadRequest (tid, awlid) {
 
 var scheduleSendReadRequest = function () {
   setTimeout(function timeout () {
-    if (((new Date()) - lastResponseTimestamp) > ((config.pollingTime + 10) * 1000)) {
-      logger.verbose('Did not receive last response in a reasonable time, renewing session')
-      renewSession()
+    if (!isEmptyObject(lastResponse) && ((new Date()) - lastResponseTimestamp) > ((config.pollingTime + 10) * 1000)) {
+      logger.verbose('Did not receive last response in a reasonable time, reconnecting to websocket')
+      connection.close()
+      connectToWebsocket()
     } else if (websocketConnected) {
       var requestMessage = ''
 
-      if (!isEmptyObject(loginMessage !== '')) {
+      if (!isEmptyObject(loginMessage)) {
         requestMessage = loginMessage
       } else {
         requestMessage = getReadRequest(tid, awlid)
