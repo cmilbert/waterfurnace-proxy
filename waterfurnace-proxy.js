@@ -236,6 +236,7 @@ var scheduleSendReadRequest = function () {
 
       if (!isEmptyObject(loginMessage)) {
         requestMessage = loginMessage
+        loginMessage = {}
       } else {
         requestMessage = getReadRequest(tid, awlid)
       }
